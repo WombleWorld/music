@@ -8,7 +8,7 @@
   body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:0;background:#0b1f3a;color:#fff}
   header{padding:18px 16px;background:#142a52}
   h1{margin:0;font-size:20px}
-  #game{max-width:900px;margin:20px auto;padding:16px}
+  #game{max-width:980px;margin:20px auto;padding:16px}
   .board{display:grid;grid-template-columns:1fr 1fr;gap:16px}
   .panel{background:#11264a;border:1px solid #264774;border-radius:8px;padding:16px;min-height:220px}
   figure{margin:0;display:flex;flex-direction:column;gap:8px;align-items:center;justify-content:center}
@@ -25,6 +25,14 @@
   .wrong{outline:2px solid #e25d5d}
   .small{font-size:12px;opacity:.9}
   .muted{opacity:.7}
+  /* Reveal panel for player photo + status */
+  .reveal{display:none;margin-top:12px;border-top:1px dashed #2f538a;padding-top:12px}
+  .reveal figure{align-items:flex-start}
+  .playerImg{width:100%;max-width:360px;height:220px;object-fit:cover;border-radius:6px;border:1px solid #264774;background:#0b1f3a}
+  .status{margin-top:8px;font-weight:800;letter-spacing:.8px}
+  .status.ok{color:#5ad37c}
+  .status.nope{color:#e25d5d}
+  .playerName{margin-top:2px;opacity:.9}
   @media (max-width:800px){.board{grid-template-columns:1fr}}
 </style>
 </head>
@@ -54,8 +62,21 @@
       </figure>
       <div class="footer small">WombleWorld verdicts are legally binding in the court of pub chat.</div>
     </div>
+
     <div class="panel">
       <div class="choices" id="choices"></div>
+
+      <!-- Reveal: shows player photo + CORRECT/INCORRECT after selection -->
+      <div class="reveal" id="reveal">
+        <figure>
+          <img id="revealImg" class="playerImg" alt="">
+          <figcaption>
+            <div id="revealStatus" class="status">CORRECT</div>
+            <div id="revealName" class="playerName"></div>
+          </figcaption>
+        </figure>
+      </div>
+
       <div class="row">
         <button id="skipBtn" class="pill" style="cursor:pointer;background:#20406f;border:1px solid #2f538a">Skip</button>
         <button id="hardBtn" class="pill" style="cursor:pointer;background:#6b3fbf;border:1px solid #8d62da">Hard Mode</button>
@@ -67,7 +88,7 @@
 </div>
 
 <script>
-/* ---------- Data (now with optional image per band) ---------- */
+/* ---------- Bands (optionally with band image) ---------- */
 const PAIRS = [
   {player:"Matty Stevens",    band:"Kaiser Chiefs",       quip:"Fox in the box. I Predict A Goal.",         img:"img/Kaiser_Chiefs.PNG"},
   {player:"Nathan Bishop",    band:"Bloc Party",          quip:"Shot-stopper with Silent Alarm reflexes.",  img:"img/bloc_party.jpg"},
@@ -82,6 +103,23 @@ const PAIRS = [
   {player:"Riley Harbottle",  band:"The Strokes",         quip:"Angles clean. Lines tidy. Very 2001.",      img:"img/the_strokes.jpg"}
 ];
 
+/* ---------- Player photos (point to your uploads) ---------- */
+/* If you use .png just change the extensions below. */
+const PLAYER_PHOTOS = {
+  "Matty Stevens":"img/players/Matty_Stevens.PNG",
+  "Nathan Bishop":"img/players/nathan_bishop.jpg",
+  "Marcus Browne":"img/players/marcus_browne.jpg",
+  "Jake Reeves":"img/players/jake_reeves.jpg",
+  "Ryan Johnson":"img/players/ryan_johnson.jpg",
+  "Omar Bugiel":"img/players/omar_bugiel.jpg",
+  "Josh Kelly":"img/players/josh_kelly.jpg",
+  "Alistair Smith":"img/players/alistair_smith.jpg",
+  "Steve Seddon":"img/players/steve_seddon.jpg",
+  "Myles Hippolyte":"img/players/myles_hippolyte.jpg",
+  "Riley Harbottle":"img/players/riley_harbottle.jpg"
+};
+
+/* ---------- Decoys pool ---------- */
 const EXTRA_PLAYERS = ["Danilo Orsi","Antwoine Hackford","Callum Maycock","Omar Bugiel","Josh Kelly","Nathan Asiimwe","Patrick Bauer","Jake Reeves","Marcus Browne","Alistair Smith","Ryan Johnson","Steve Seddon","Myles Hippolyte","Riley Harbottle","Nathan Bishop"];
 
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
@@ -103,6 +141,11 @@ const timerFill = document.getElementById('timerFill');
 const modeName = document.getElementById('modeName');
 const hintEl = document.getElementById('hint');
 
+const revealBox = document.getElementById('reveal');
+const revealImg = document.getElementById('revealImg');
+const revealStatus = document.getElementById('revealStatus');
+const revealName = document.getElementById('revealName');
+
 document.getElementById('skipBtn').onclick = () => next();
 document.getElementById('resetBtn').onclick = init;
 document.getElementById('hardBtn').onclick = () => { hard = !hard; modeName.textContent = hard ? "Hard" : "Normal"; renderRound(); };
@@ -110,7 +153,7 @@ document.getElementById('hardBtn').onclick = () => { hard = !hard; modeName.text
 function init(){
   deck = shuffle([...PAIRS]);
   idx = 0; score = 0; streak = 0;
-  renderRound(); // do NOT pre-increment
+  renderRound(); // first round, no pre-increment
 }
 
 function updateHud(){
@@ -125,14 +168,15 @@ function startTimer(){
   timer = setInterval(()=>{
     t -= 0.1;
     timerFill.style.width = `${Math.max(0, t/maxT*100)}%`;
-    if(t<=0){ clearInterval(timer); revealAnswer(); setTimeout(next, 700); }
+    if(t<=0){ clearInterval(timer); revealCorrectOnTimeout(); setTimeout(next, 800); }
   },100);
 }
 function stopTimer(){ clearInterval(timer); if(!hard) timerFill.style.width = "0" }
 
 function renderRound(){
   stopTimer();
-  if(idx >= deck.length){ // end screen
+  hideReveal();
+  if(idx >= deck.length){
     bandImg.removeAttribute('src'); bandImg.alt="";
     bandTitle.textContent = "Full time.";
     choicesEl.innerHTML = "";
@@ -141,18 +185,13 @@ function renderRound(){
     return;
   }
   const card = deck[idx];
-  // image (optional)
-  if(card.img){
-    bandImg.src = card.img;
-    bandImg.alt = `${card.band}`;
-  }else{
-    bandImg.removeAttribute('src');
-    bandImg.alt = "";
-  }
+  // band image
+  if(card.img){ bandImg.src = card.img; bandImg.alt = `${card.band}`; }
+  else { bandImg.removeAttribute('src'); bandImg.alt=""; }
   bandTitle.textContent = card.band;
   hintEl.textContent = card.quip;
 
-  // build options
+  // options
   const pool = new Set([card.player]);
   const roster = Array.from(new Set([...EXTRA_PLAYERS, ...PAIRS.map(p=>p.player)])).filter(n=>n!==card.player);
   shuffle(roster);
@@ -172,6 +211,33 @@ function renderRound(){
   if(hard) startTimer();
 }
 
+function hideReveal(){
+  revealBox.style.display = "none";
+  revealImg.removeAttribute('src');
+  revealImg.alt = "";
+  revealStatus.textContent = "";
+  revealStatus.classList.remove('ok','nope');
+  revealName.textContent = "";
+}
+
+function showReveal(playerName, isCorrect, timedOut=false){
+  const src = PLAYER_PHOTOS[playerName];
+  if(src){ revealImg.src = src; revealImg.alt = playerName; }
+  else { revealImg.removeAttribute('src'); revealImg.alt = ""; }
+  if(timedOut){
+    revealStatus.textContent = "TIME'S UP";
+    revealStatus.classList.remove('ok','nope');
+  }else if(isCorrect){
+    revealStatus.textContent = "CORRECT";
+    revealStatus.classList.add('ok'); revealStatus.classList.remove('nope');
+  }else{
+    revealStatus.textContent = "INCORRECT";
+    revealStatus.classList.add('nope'); revealStatus.classList.remove('ok');
+  }
+  revealName.textContent = playerName;
+  revealBox.style.display = "block";
+}
+
 function revealAnswer(){
   [...choicesEl.children].forEach(b=>{
     b.disabled = true;
@@ -185,11 +251,23 @@ function pick(choice, answer, btn){
   if(correct){ score += hard?2:1; streak += 1; btn.classList.add('correct'); }
   else { streak = 0; btn.classList.add('wrong'); revealAnswer(); }
   [...choicesEl.children].forEach(b=>b.disabled = true);
+
+  // Show the selected player's photo with status
+  showReveal(choice, correct, false);
+
   updateHud();
-  setTimeout(next, 600);
+  setTimeout(next, 900);
+}
+
+function revealCorrectOnTimeout(){
+  revealAnswer();
+  // Show the correct player's photo with TIME'S UP
+  const correctName = deck[idx].player;
+  showReveal(correctName, false, true);
 }
 
 function next(){
+  stopTimer();
   idx++;           // increment AFTER finishing current round
   renderRound();   // then render the next one
 }
