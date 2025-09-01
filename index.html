@@ -11,10 +11,12 @@
   #game{max-width:900px;margin:20px auto;padding:16px}
   .board{display:grid;grid-template-columns:1fr 1fr;gap:16px}
   .panel{background:#11264a;border:1px solid #264774;border-radius:8px;padding:16px;min-height:220px}
-  .band{display:flex;align-items:center;justify-content:center;height:180px;font-size:28px;font-weight:700;text-align:center}
+  figure{margin:0;display:flex;flex-direction:column;gap:8px;align-items:center;justify-content:center}
+  .bandTitle{font-size:22px;font-weight:700;text-align:center}
+  .bandImg{max-width:100%;height:240px;object-fit:cover;border-radius:6px;border:1px solid #264774;background:#0b1f3a}
   .choices button{display:block;width:100%;text-align:left;margin:8px 0;padding:10px 12px;border-radius:6px;border:1px solid #2f538a;background:#18335f;color:#fff;cursor:pointer}
   .choices button:hover{background:#20406f}
-  .row{display:flex;gap:10px;align-items:center;margin-top:10px}
+  .row{display:flex;gap:10px;align-items:center;margin-top:10px;flex-wrap:wrap}
   .pill{background:#264774;border-radius:999px;padding:6px 10px;font-size:12px}
   .bar{height:10px;background:#264774;border-radius:6px;overflow:hidden}
   .fill{height:100%;width:0;background:#ffd200}
@@ -23,6 +25,7 @@
   .wrong{outline:2px solid #e25d5d}
   .small{font-size:12px;opacity:.9}
   .muted{opacity:.7}
+  @media (max-width:800px){.board{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -32,7 +35,7 @@
 
 <div id="game">
   <div class="row">
-    <div class="pill" id="round">Round 1/10</div>
+    <div class="pill" id="round">Round 1/1</div>
     <div class="pill" id="score">Score 0</div>
     <div class="pill" id="streak">Streak 0</div>
     <div class="pill">Mode: <span id="modeName">Normal</span></div>
@@ -45,7 +48,10 @@
 
   <div class="board">
     <div class="panel">
-      <div class="band" id="bandCard">Loading…</div>
+      <figure>
+        <img id="bandImg" class="bandImg" alt="" loading="lazy">
+        <figcaption class="bandTitle" id="bandTitle">Loading…</figcaption>
+      </figure>
       <div class="footer small">WombleWorld verdicts are legally binding in the court of pub chat.</div>
     </div>
     <div class="panel">
@@ -55,29 +61,27 @@
         <button id="hardBtn" class="pill" style="cursor:pointer;background:#6b3fbf;border:1px solid #8d62da">Hard Mode</button>
         <button id="resetBtn" class="pill" style="cursor:pointer;background:#3a5f20;border:1px solid #6fa64b">Reset</button>
       </div>
-      <div class="footer small muted">Hard mode removes obvious decoys and adds a timer. Like an SGM with proxy votes but fun.</div>
+      <div class="footer small muted">Hard mode adds a timer. Like an SGM with proxies but fun.</div>
     </div>
   </div>
 </div>
 
 <script>
-/* ---------- Data: tweak freely ---------- */
+/* ---------- Data (now with optional image per band) ---------- */
 const PAIRS = [
-  // Players are current/recent AFCW names you use often. Bands are 00s indie.
-  // Change the mapping to your taste. Keep it playful.
-  {player:"Matty Stevens", band:"Kaiser Chiefs", quip:"Fox in the box. Shouts I Predict A Goal."},
-  {player:"Nathan Bishop", band:"Bloc Party", quip:"Shot-stopper with Silent Alarm reflexes."},
-  {player:"Marcus Browne", band:"Franz Ferdinand", quip:"Take Me Out. Then take two more."},
-  {player:"Jake Reeves", band:"Arctic Monkeys", quip:"Do I Wanna Know if he runs the midfield. Yes."},
-  {player:"Ryan Johnson", band:"Editors", quip:"Cold steel. Low heart rate. High line okay."},
-  {player:"Omar Bugiel", band:"Kasabian", quip:"Underrated chaos. Club Foot energy."},
-  {player:"Josh Kelly", band:"The Kooks", quip:"Naive no. Nifty yes."},
-  {player:"Alistair Smith", band:"Foals", quip:"Press. Pass. Patter. Total Life Forever legs."},
-  {player:"Steve Seddon", band:"The Libertines", quip:"Attacks with shambolic intent. Usually works."},
-  {player:"Myles Hippolyte", band:"Bombay Bicycle Club", quip:"Floaty. Clever. Lovely patterns."},
-  {player:"Riley Harbottle", band:"The Strokes", quip:"Angles clean. Lines tidy. Very 2001."}
+  {player:"Matty Stevens",    band:"Kaiser Chiefs",       quip:"Fox in the box. I Predict A Goal.",         img:"img/kaiser_chiefs.jpg"},
+  {player:"Nathan Bishop",    band:"Bloc Party",          quip:"Shot-stopper with Silent Alarm reflexes.",  img:"img/bloc_party.jpg"},
+  {player:"Marcus Browne",    band:"Franz Ferdinand",     quip:"Take Me Out. Then take two more.",         img:"img/franz_ferdinand.jpg"},
+  {player:"Jake Reeves",      band:"Arctic Monkeys",      quip:"Do I Wanna Know if he runs midfield? Yes.",img:"img/arctic_monkeys.jpg"},
+  {player:"Ryan Johnson",     band:"Editors",             quip:"Cold steel. Low pulse. High line.",         img:"img/editors.jpg"},
+  {player:"Omar Bugiel",      band:"Kasabian",            quip:"Underrated chaos. Club Foot energy.",       img:"img/kasabian.jpg"},
+  {player:"Josh Kelly",       band:"The Kooks",           quip:"Naive no. Nifty yes.",                      img:"img/the_kooks.jpg"},
+  {player:"Alistair Smith",   band:"Foals",               quip:"Press. Pass. Patterns. Total Life Forever.",img:"img/foals.jpg"},
+  {player:"Steve Seddon",     band:"The Libertines",      quip:"Shambolic intent. Usually works.",          img:"img/the_libertines.jpg"},
+  {player:"Myles Hippolyte",  band:"Bombay Bicycle Club", quip:"Floaty. Clever. Lovely patterns.",          img:"img/bombay_bicycle_club.jpg"},
+  {player:"Riley Harbottle",  band:"The Strokes",         quip:"Angles clean. Lines tidy. Very 2001.",      img:"img/the_strokes.jpg"}
 ];
-// Extra decoys. Add or remove as squads change.
+
 const EXTRA_PLAYERS = ["Danilo Orsi","Antwoine Hackford","Callum Maycock","Omar Bugiel","Josh Kelly","Nathan Asiimwe","Patrick Bauer","Jake Reeves","Marcus Browne","Alistair Smith","Ryan Johnson","Steve Seddon","Myles Hippolyte","Riley Harbottle","Nathan Bishop"];
 
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
@@ -89,7 +93,8 @@ let streak = 0;
 let hard = false;
 let timer=null, t=0, maxT=12;
 
-const bandEl = document.getElementById('bandCard');
+const bandImg = document.getElementById('bandImg');
+const bandTitle = document.getElementById('bandTitle');
 const choicesEl = document.getElementById('choices');
 const roundEl = document.getElementById('round');
 const scoreEl = document.getElementById('score');
@@ -98,42 +103,63 @@ const timerFill = document.getElementById('timerFill');
 const modeName = document.getElementById('modeName');
 const hintEl = document.getElementById('hint');
 
-document.getElementById('skipBtn').onclick = () => next(true);
+document.getElementById('skipBtn').onclick = () => next();
 document.getElementById('resetBtn').onclick = init;
-document.getElementById('hardBtn').onclick = () => { hard = !hard; modeName.textContent = hard ? "Hard" : "Normal"; next(true); };
+document.getElementById('hardBtn').onclick = () => { hard = !hard; modeName.textContent = hard ? "Hard" : "Normal"; renderRound(); };
 
 function init(){
   deck = shuffle([...PAIRS]);
-  idx = 0; score = 0; streak = 0; updateHud();
-  next(true);
+  idx = 0; score = 0; streak = 0;
+  renderRound(); // do NOT pre-increment
 }
+
 function updateHud(){
   roundEl.textContent = `Round ${Math.min(idx+1, deck.length)}/${deck.length}`;
   scoreEl.textContent = `Score ${score}`;
   streakEl.textContent = `Streak ${streak}`;
 }
+
 function startTimer(){
   clearInterval(timer); t = maxT;
   timerFill.style.width = "100%";
   timer = setInterval(()=>{
     t -= 0.1;
     timerFill.style.width = `${Math.max(0, t/maxT*100)}%`;
-    if(t<=0){ clearInterval(timer); lockChoices(false,true); setTimeout(()=>next(false), 600); }
+    if(t<=0){ clearInterval(timer); revealAnswer(); setTimeout(next, 700); }
   },100);
 }
-function stopTimer(){ clearInterval(timer); timerFill.style.width = hard ? `${Math.max(0, t/maxT*100)}%` : "0" }
+function stopTimer(){ clearInterval(timer); if(!hard) timerFill.style.width = "0" }
 
-function makeRound(){
+function renderRound(){
+  stopTimer();
+  if(idx >= deck.length){ // end screen
+    bandImg.removeAttribute('src'); bandImg.alt="";
+    bandTitle.textContent = "Full time.";
+    choicesEl.innerHTML = "";
+    hintEl.textContent = verdict();
+    updateHud();
+    return;
+  }
   const card = deck[idx];
-  bandEl.textContent = card.band;
+  // image (optional)
+  if(card.img){
+    bandImg.src = card.img;
+    bandImg.alt = `${card.band}`;
+  }else{
+    bandImg.removeAttribute('src');
+    bandImg.alt = "";
+  }
+  bandTitle.textContent = card.band;
   hintEl.textContent = card.quip;
-  // Build options
+
+  // build options
   const pool = new Set([card.player]);
   const roster = Array.from(new Set([...EXTRA_PLAYERS, ...PAIRS.map(p=>p.player)])).filter(n=>n!==card.player);
   shuffle(roster);
   const optionCount = hard ? 5 : 6;
   while(pool.size<optionCount) pool.add(roster.pop());
   const opts = shuffle([...pool]);
+
   choicesEl.innerHTML = "";
   opts.forEach(name=>{
     const btn = document.createElement('button');
@@ -141,40 +167,33 @@ function makeRound(){
     btn.onclick = () => pick(name, card.player, btn);
     choicesEl.appendChild(btn);
   });
-  if(hard) startTimer(); else stopTimer();
+
+  updateHud();
+  if(hard) startTimer();
 }
-function lockChoices(correctBtn, timedOut=false){
+
+function revealAnswer(){
   [...choicesEl.children].forEach(b=>{
     b.disabled = true;
-    if(correctBtn && b===correctBtn) b.classList.add('correct');
+    if(b.textContent === deck[idx].player) b.classList.add('correct');
   });
-  if(timedOut){
-    [...choicesEl.children].forEach(b=>{
-      if(b.textContent === deck[idx].player) b.classList.add('correct');
-    });
-  }
 }
+
 function pick(choice, answer, btn){
   stopTimer();
   const correct = choice===answer;
   if(correct){ score += hard?2:1; streak += 1; btn.classList.add('correct'); }
-  else { streak = 0; btn.classList.add('wrong'); }
-  lockChoices(btn);
+  else { streak = 0; btn.classList.add('wrong'); revealAnswer(); }
+  [...choicesEl.children].forEach(b=>b.disabled = true);
   updateHud();
-  setTimeout(()=> next(correct), 600);
+  setTimeout(next, 600);
 }
-function next(wasCorrectOrSkipped){
-  stopTimer();
-  idx++;
-  if(idx>=deck.length){
-    bandEl.textContent = "Full time.";
-    choicesEl.innerHTML = "";
-    hintEl.textContent = verdict();
-    return;
-  }
-  updateHud();
-  makeRound();
+
+function next(){
+  idx++;           // increment AFTER finishing current round
+  renderRound();   // then render the next one
 }
+
 function verdict(){
   if(score >= deck.length*0.9) return "Elite taste. Promotion form. Somewhere an ESG report applauds your methodology.";
   if(score >= deck.length*0.6) return "Solid mid-table. Needs a cup run. DTB will schedule a working group.";
