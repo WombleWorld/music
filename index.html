@@ -168,7 +168,7 @@ function startTimer(){
   timer = setInterval(()=>{
     t -= 0.1;
     timerFill.style.width = `${Math.max(0, t/maxT*100)}%`;
-    if(t<=0){ clearInterval(timer); revealCorrectOnTimeout(); setTimeout(next, 800); }
+    if(t<=0){ clearInterval(timer); revealCorrectOnTimeout(); setTimeout(next, 2500); }
   },100);
 }
 function stopTimer(){ clearInterval(timer); if(!hard) timerFill.style.width = "0" }
@@ -256,7 +256,7 @@ function pick(choice, answer, btn){
   showReveal(choice, correct, false);
 
   updateHud();
-  setTimeout(next, 900);
+  setTimeout(next, 2500);
 }
 
 function revealCorrectOnTimeout(){
